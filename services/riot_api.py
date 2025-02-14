@@ -1,6 +1,7 @@
 import requests
 from dotenv import load_dotenv
 import os
+from datetime import datetime
 
 load_dotenv()
 
@@ -27,10 +28,16 @@ def get_puuid(game_name, tag_line):
     data = fetch_data(url)
     return data.get("puuid")
 
-def get_tournament_matches(puuid, count=10):
-    """Récupère les IDs des matchs de tournoi d'un joueur via son PUUID."""
+def get_tournament_matches(puuid, count=20, start_timestamp=None, end_timestamp=None):
+    """Récupère les IDs des matchs d'un joueur avec une plage de dates."""
     url = f"{RIOT_API_BASE_URL}/lol/match/v5/matches/by-puuid/{puuid}/ids"
     params = {"queue": 700, "start": 0, "count": count}
+
+    if start_timestamp:
+        params["startTime"] = start_timestamp
+    if end_timestamp:
+        params["endTime"] = end_timestamp
+
     return fetch_data(url, params)
 
 def get_match_details(match_id):
@@ -57,20 +64,27 @@ def get_champion_data():
     }
 
 def extract_match_summary(match_details, puuid):
-    """Extrait les bans, les champions joués et le side de chaque équipe."""
+    """Extrait les bans, les champions joués, les statistiques détaillées et le side de chaque équipe."""
     info = match_details["info"]
     teams = info["teams"]
-    participants = info["participants"]
-
+    participants = info["participants"] 
     # Récupérer les données des champions
-    champion_map = get_champion_data()
-
+    champion_map = get_champion_data()  
     # Identifier l'équipe du joueur
     player_team_id = next(p["teamId"] for p in participants if p["puuid"] == puuid)
 
     # Séparer les équipes
     player_team = next(t for t in teams if t["teamId"] == player_team_id)
     enemy_team = next(t for t in teams if t["teamId"] != player_team_id)
+    
+    # Déterminer l'équipe gagnante
+    winning_team_id = next(t["teamId"] for t in teams if t["win"])
+    winning_side = "blue" if winning_team_id == 100 else "red"
+    
+    # Récupérer la date et durée de la partie
+    game_duration = info["gameDuration"]  # en secondes
+    game_start_timestamp = info.get("gameStartTimestamp", 0)  # en millisecondes
+    game_date = datetime.utcfromtimestamp(game_start_timestamp / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
     # Liste des rôles connus et ordre de tri
     role_order = ["top", "jungle", "middle", "bottom", "utility"]
@@ -80,8 +94,27 @@ def extract_match_summary(match_details, puuid):
     player_team_side = side_mapping.get(player_team["teamId"], "unknown")
     enemy_team_side = side_mapping.get(enemy_team["teamId"], "unknown")
 
-    # Récupérer les bans et champions
+    # Fonction pour récupérer les statistiques d'un joueur
+    def get_player_stats(player):
+        return {
+            "name": player["championName"],
+            "image": champion_map[int(player["championId"])]["image"],
+            "pseudo": f"{player['riotIdGameName']}#{player['riotIdTagline']}",
+            "position": player.get("teamPosition", "unknown").lower(),
+            "gold": player["goldEarned"],
+            "kda": f"{player['kills']}/{player['deaths']}/{player['assists']}",
+            "level": player["champLevel"],
+            "cs": player["totalMinionsKilled"],
+            "damage": player["totalDamageDealtToChampions"],
+        }
+
+    # Récupérer les bans et champions avec stats
     result = {
+        "match_info": {
+            "duration": game_duration,
+            "date": game_date,
+            "winning_team": winning_side
+        },
         "player_team": {
             "side": player_team_side,
             "bans": [
@@ -93,16 +126,8 @@ def extract_match_summary(match_details, puuid):
                 for ban in player_team["bans"]
             ],
             "champions": sorted(
-                [
-                    {
-                        "name": p["championName"],
-                        "image": champion_map[int(p["championId"])]["image"],
-                        "pseudo": f"{p['riotIdGameName']}#{p['riotIdTagline']}",
-                        "position": p.get("teamPosition", "unknown").lower(), 
-                    }
-                    for p in participants if p["teamId"] == player_team_id
-                ],
-                key=lambda x: role_order.index(x["position"]) if x["position"] in role_order else len(role_order)
+                [get_player_stats(p) for p in participants if p["teamId"] == player_team_id],
+                key=lambda x: role_order.index(x["position"]) if x["position"] in role_order else len(role_order),
             ),
         },
         "enemy_team": {
@@ -116,16 +141,8 @@ def extract_match_summary(match_details, puuid):
                 for ban in enemy_team["bans"]
             ],
             "champions": sorted(
-                [
-                    {
-                        "name": p["championName"],
-                        "image": champion_map[int(p["championId"])]["image"],
-                        "pseudo": f"{p['riotIdGameName']}#{p['riotIdTagline']}",
-                        "position": p.get("teamPosition", "unknown").lower(),
-                    }
-                    for p in participants if p["teamId"] != player_team_id
-                ],
-                key=lambda x: role_order.index(x["position"]) if x["position"] in role_order else len(role_order)
+                [get_player_stats(p) for p in participants if p["teamId"] != player_team_id],
+                key=lambda x: role_order.index(x["position"]) if x["position"] in role_order else len(role_order),
             ),
         },
     }

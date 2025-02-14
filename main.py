@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from datetime import datetime
+from fastapi import Query
 from services.riot_api import (
     get_puuid,
     get_tournament_matches,
@@ -70,10 +72,16 @@ async def fetch_puuid(game_name: str, tag_line: str):
 
 @app.get("/get-matches")
 @handle_errors
-async def fetch_matches(game_name: str, tag_line: str):
-    """Route pour récupérer les matchs d'un joueur."""
+async def fetch_matches(
+    game_name: str, 
+    tag_line: str, 
+    start_time: int = Query(None), 
+    end_time: int = Query(None)
+):
+    """Récupère les matchs d'un joueur avec une option de filtrage par date."""
     puuid = get_puuid(game_name, tag_line)
-    matches = get_tournament_matches(puuid)
+
+    matches = get_tournament_matches(puuid, count=20, start_timestamp=start_time, end_timestamp=end_time)
     return {"matches": matches}
 
 
