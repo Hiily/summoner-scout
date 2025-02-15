@@ -14,7 +14,7 @@ import logging
 from functools import wraps
 
 # Configuration globale
-API_BASE_URL = "http://127.0.0.1:8000"
+API_BASE_URL = "https://summoner-scout.onrender.com"
 TEMPLATES_DIR = "templates"
 STATIC_DIR = "static"
 
@@ -30,7 +30,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # Configuration CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # À limiter en production
+    allow_origins=["https://summoner-scout.onrender.com"],  # À limiter en production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
