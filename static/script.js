@@ -70,182 +70,88 @@ async function handleFormSubmit(event) {
     }
 }
 
-// Fonction pour afficher une vue d'ensemble d'un match
+// Fonction pour afficher une vue d'ensemble d'un match// Fonction pour afficher une vue d'ensemble d'un match avec un template HTML
 function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
-    const matchCard = document.createElement('div');
-    matchCard.className = 'bg-white shadow-md rounded-lg p-6 mb-4';
+    const template = document.getElementById("match-template");
+    const matchCard = template.content.cloneNode(true).querySelector("div");
+    matchCard.id = `match-${matchId}`;
+    matchCard.classList.remove("hidden");
 
     fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${puuid}`)
-        .then((matchDetails) => {
-            const roles = ["top", "jungle", "middle", "bottom", "utility"];
+        .then(matchDetails => {
             const playerSideClass =
                 matchDetails.player_team.side === 'blue' ? 'text-blue-600' : 'text-red-600';
             const enemySideClass =
                 matchDetails.enemy_team.side === 'blue' ? 'text-blue-600' : 'text-red-600';
-            const playerBgClass =
-                matchDetails.player_team.side === 'blue' ? 'bg-blue-100' : 'bg-red-100';
-            const enemyBgClass =
-                matchDetails.enemy_team.side === 'blue' ? 'bg-blue-100' : 'bg-red-100';
-            
-            const matchDate = new Date(matchDetails.match_info.date);
-            const formattedDate = matchDate.toLocaleDateString('fr-FR'); 
-            const durationMinutes = Math.floor(matchDetails.match_info.duration / 60); 
+
+            // 🎯 Mettre à jour les infos générales
+            matchCard.querySelector(".match-date").textContent =
+                new Date(matchDetails.match_info.date).toLocaleDateString('fr-FR');
+            matchCard.querySelector(".match-duration").textContent =
+                `${Math.floor(matchDetails.match_info.duration / 60)} min`;
+
             const isWin = matchDetails.match_info.winning_team === matchDetails.player_team.side;
-            const winText = isWin ? "Victoire" : "Défaite";
-            const winClass = isWin ? "text-green-600" : "text-red-600"; 
+            matchCard.querySelector(".match-result").textContent = isWin ? "Victoire" : "Défaite";
+            matchCard.querySelector(".match-result").classList.add(isWin ? "text-green-600" : "text-red-600");
 
-            matchCard.innerHTML = `
-                <div class="mb-4">
-                    <p class="text-sm text-gray-600">${formattedDate}</p>
-                    <p class="text-sm font-bold ${winClass}">${winText}</p>
-                    <p class="text-sm text-gray-600">${durationMinutes} min</p>
-                </div>
-                <div class="flex justify-between items-start">
-                    <!-- Equipe du joueur -->
-                    <div class="w-1/2">
-                        <h3 class="text-lg font-bold ${playerSideClass}">Player Team</h3>
-                        <div class="mb-4">
-                            <p class="text-sm font-semibold text-gray-700">Bans:</p>
-                            <div class="flex space-x-2">
-                                ${matchDetails.player_team.bans
-                                    .map(
-                                        (ban) =>
-                                            `<img src="${ban.image}" alt="${ban.name}" class="w-10 h-10 rounded">`
-                                    )
-                                    .join('')}
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold text-gray-700">Picks:</p>
-                            <div class="flex flex-col space-y-2">
-                                ${roles
-                                    .map((role) =>
-                                        matchDetails.player_team.champions
-                                            .filter((champ) => champ.position === role)
-                                            .map(
-                                                (champ) => `
-                                                <div class="flex items-center space-x-2 ${
-                                                    champ.pseudo === searchedPseudo
-                                                        ? playerBgClass + ' p-2 rounded'
-                                                        : ''
-                                                }">
-                                                    <img src="${champ.image}" alt="${champ.name}" class="w-10 h-10 rounded">
-                                                    <div>
-                                                        <a href="#" class="${
-                                                            playerSideClass
-                                                        } hover:underline" onclick="searchPlayer('${
-                                                    champ.pseudo.split('#')[0]
-                                                }', '${champ.pseudo.split('#')[1]}')">
-                                                            ${champ.pseudo}
-                                                        </a>
-                                                        <p class="text-gray-600">${champ.name}</p>
-                                                    </div>
-                                                </div>
-                                            `
-                                            )
-                                            .join('')
-                                    )
-                                    .join('')}
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Equipe adverse -->
-                    <div class="w-1/2 text-right">
-                        <h3 class="text-lg font-bold ${enemySideClass}">Enemy Team</h3>
-                        <div class="mb-4">
-                            <p class="text-sm font-semibold text-gray-700">Bans:</p>
-                            <div class="flex justify-end space-x-2">
-                                ${matchDetails.enemy_team.bans
-                                    .map(
-                                        (ban) =>
-                                            `<img src="${ban.image}" alt="${ban.name}" class="w-10 h-10 rounded">`
-                                    )
-                                    .join('')}
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-sm font-semibold text-gray-700">Picks:</p>
-                            <div class="flex flex-col space-y-2 items-end">
-                                ${roles
-                                    .map((role) =>
-                                        matchDetails.enemy_team.champions
-                                            .filter((champ) => champ.position === role)
-                                            .map(
-                                                (champ) => `
-                                                <div class="flex items-center space-x-2 justify-end ${
-                                                    champ.pseudo === searchedPseudo
-                                                        ? enemyBgClass + ' p-2 rounded'
-                                                        : ''
-                                                }">
-                                                    <div>
-                                                        <a href="#" class="${
-                                                            enemySideClass
-                                                        } hover:underline" onclick="searchPlayer('${
-                                                    champ.pseudo.split('#')[0]
-                                                }', '${champ.pseudo.split('#')[1]}')">
-                                                            ${champ.pseudo}
-                                                        </a>
-                                                        <p class="text-gray-600">${champ.name}</p>
-                                                    </div>
-                                                    <img src="${champ.image}" alt="${champ.name}" class="w-10 h-10 rounded">
-                                                </div>
-                                            `
-                                            )
-                                            .join('')
-                                    )
-                                    .join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            // Ajout d'un div pour les détails du match (initialement caché)
-            const detailsDiv = document.createElement("div");
-            detailsDiv.id = `details-${matchId}`;
-            detailsDiv.className = "hidden mt-4 p-4 bg-gray-100 rounded-lg";
-            matchCard.appendChild(detailsDiv);
+            // 🎯 Mettre à jour les équipes
+            updateTeamDetails(matchCard.querySelector(".player-team"), matchDetails.player_team, playerSideClass, false);
+            updateTeamDetails(matchCard.querySelector(".enemy-team"), matchDetails.enemy_team, enemySideClass, true);
 
-            console.log(`✅ Ajout de #details-${matchId} dans le DOM`);
-            const showMoreButton = document.createElement('button');
-            showMoreButton.className = "bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-600";
-            showMoreButton.textContent = "Show More";
-            showMoreButton.onclick = () => toggleMatchDetails(matchId, puuid, showMoreButton);
-            matchCard.appendChild(showMoreButton);
+            // 🎯 Activer le bouton "Show More"
+            const showMoreButton = matchCard.querySelector(".show-more");
+            showMoreButton.onclick = () => toggleMatchDetails(matchId, puuid, showMoreButton, matchCard.querySelector(".details-container"));
+
             matchList.appendChild(matchCard);
-
         })
-        .catch((error) => {
+        .catch(error => {
             matchCard.innerHTML = `<p class="text-red-600">Error fetching match details: ${error.message}</p>`;
             matchList.appendChild(matchCard);
         });
 }
 
-// Fonction pour ajouter le bouton "Show More" et afficher les détails du match
-function addShowMoreButton(matchCard, matchId, puuid) {
-    const showMoreButton = document.createElement('button');
-    showMoreButton.className = "mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-700";
-    showMoreButton.textContent = "Show More";
-    showMoreButton.onclick = () => toggleMatchDetails(matchId, puuid, showMoreButton);
-    
-    const detailsDiv = document.createElement('div');
-    detailsDiv.id = `details-${matchId}`;
-    detailsDiv.classList.add("hidden", "mt-4");
+// 🔧 Fonction pour mettre à jour l'affichage d'une équipe (bans + picks)
+// 🔧 Fonction pour mettre à jour l'affichage d'une équipe (bans + picks)
+function updateTeamDetails(teamElement, teamData, sideClass, isEnemy = false) {
+    teamElement.querySelector(".team-title").textContent =
+        teamData.side === "blue" ? "Équipe Bleue" : "Équipe Rouge";
+    teamElement.querySelector(".team-title").classList.add(sideClass);
 
-    matchCard.appendChild(showMoreButton);
-    matchCard.appendChild(detailsDiv);
+    // 🎯 Mettre à jour les bans
+    const banContainer = teamElement.querySelector(".ban-images");
+    banContainer.innerHTML = teamData.bans.map(
+        ban => `<img src="${ban.image}" alt="${ban.name}" class="w-10 h-10 rounded">`
+    ).join("");
+
+    // 🎯 Mettre à jour les picks
+    const pickContainer = teamElement.querySelector(".pick-list");
+    pickContainer.innerHTML = teamData.champions.map(champ => `
+        <div class="flex items-center space-x-2 ${isEnemy ? 'justify-end' : ''}">
+            ${isEnemy ? `
+                <div class="text-right">
+                    <a href="#" class="${sideClass} hover:underline" onclick="searchPlayer('${champ.pseudo.split('#')[0]}', '${champ.pseudo.split('#')[1]}')">
+                        ${champ.pseudo}
+                    </a>
+                    <p class="text-gray-600">${champ.name}</p>
+                </div>
+                <img src="${champ.image}" alt="${champ.name}" class="w-10 h-10 rounded ml-2">
+            ` : `
+                <img src="${champ.image}" alt="${champ.name}" class="w-10 h-10 rounded">
+                <div>
+                    <a href="#" class="${sideClass} hover:underline" onclick="searchPlayer('${champ.pseudo.split('#')[0]}', '${champ.pseudo.split('#')[1]}')">
+                        ${champ.pseudo}
+                    </a>
+                    <p class="text-gray-600">${champ.name}</p>
+                </div>
+            `}
+        </div>
+    `).join("");
 }
 
-// Fonction pour charger et afficher les détails du match
-// Fonction pour charger et afficher les détails du match
-function toggleMatchDetails(matchId, puuid, button) {
-    let detailsDiv = document.getElementById(`details-${matchId}`);
 
-    if (!detailsDiv) {
-        console.error(`Element #details-${matchId} not found.`);
-        return;
-    }
-
-    if (detailsDiv.classList.contains('hidden')) {
+// Fonction pour afficher les détails d'un match quand on clique sur "Show More"
+function toggleMatchDetails(matchId, puuid, button, detailsDiv) {
+    if (detailsDiv.classList.contains("hidden")) {
         fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${puuid}`)
             .then(matchDetails => {
                 detailsDiv.innerHTML = `
@@ -254,18 +160,17 @@ function toggleMatchDetails(matchId, puuid, button) {
                         ${generateFullPlayerList(matchDetails.enemy_team, "bg-red-200")}
                     </div>
                 `;
-                detailsDiv.classList.remove('hidden');
+                detailsDiv.classList.remove("hidden");
                 button.textContent = "Show Less";
             })
             .catch(error => {
                 detailsDiv.textContent = `Error loading details: ${error.message}`;
             });
     } else {
-        detailsDiv.classList.add('hidden');
+        detailsDiv.classList.add("hidden");
         button.textContent = "Show More";
     }
 }
-
 
 // Fonction pour générer la liste détaillée des joueurs sous forme de tableau
 function generateFullPlayerList(team, bgColor) {
@@ -332,7 +237,6 @@ function generateFullPlayerList(team, bgColor) {
         </div>
     `;
 }
-
 
 // Fonction pour lancer une recherche automatique à partir d'un clic sur un joueur
 function searchPlayer(gameName, tagLine) {

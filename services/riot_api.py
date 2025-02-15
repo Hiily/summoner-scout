@@ -31,7 +31,7 @@ def get_puuid(game_name, tag_line):
 def get_tournament_matches(puuid, count=20, start_timestamp=None, end_timestamp=None):
     """Récupère les IDs des matchs d'un joueur avec une plage de dates."""
     url = f"{RIOT_API_BASE_URL}/lol/match/v5/matches/by-puuid/{puuid}/ids"
-    params = {"queue": 700, "start": 0, "count": count}
+    params = {"type": "tourney", "start": 0, "count": count}
 
     if start_timestamp:
         params["startTime"] = start_timestamp
