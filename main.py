@@ -69,20 +69,20 @@ async def fetch_puuid(game_name: str, tag_line: str):
     puuid = get_puuid(game_name, tag_line)
     return {"puuid": puuid}
 
-
 @app.get("/get-matches")
 @handle_errors
 async def fetch_matches(
     game_name: str, 
     tag_line: str, 
     start_time: int = Query(None), 
-    end_time: int = Query(None)
+    end_time: int = Query(None),
+    match_count: int = Query(20)
 ):
     """Récupère les matchs d'un joueur avec une option de filtrage par date."""
     puuid = get_puuid(game_name, tag_line)
-
-    matches = get_tournament_matches(puuid, count=20, start_timestamp=start_time, end_timestamp=end_time)
+    matches = get_tournament_matches(puuid, count=match_count, start_timestamp=start_time, end_timestamp=end_time)
     return {"matches": matches}
+
 
 
 @app.get("/get-match-details")

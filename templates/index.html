@@ -1,45 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Match Finder</title>
-  <link rel="stylesheet" href="./static/style.css">
+  <link rel="stylesheet" href="./static/output.css">
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col items-center py-8">
-  <h1 class="text-4xl font-bold text-blue-600 mb-8">Summoner Scout</h1>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 min-h-screen flex flex-col items-center py-8">
+  <h1 class="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-8">Summoner Scout</h1>
   
-  <form id="match-form" class="bg-white shadow-md rounded-lg px-8 pt-6 pb-8 w-full max-w-md">
+
+  <form id="match-form" class="bg-white dark:bg-gray-800 shadow-md rounded-lg px-8 pt-6 pb-8 w-full max-w-md">
     <div class="mb-4">
-      <label for="gameName" class="block text-gray-700 text-sm font-bold mb-2">Game Name:</label>
+      <label for="gameName" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Game Name:</label>
       <input type="text" id="gameName" name="gameName" required 
-             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+             class="shadow appearance-none border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
     </div>
     <div class="mb-4">
-      <label for="tagLine" class="block text-gray-700 text-sm font-bold mb-2">Tag Line:</label>
+      <label for="tagLine" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Tag Line:</label>
       <input type="text" id="tagLine" name="tagLine" required 
-             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+             class="shadow appearance-none border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
     </div>
     <div class="mb-4">
-      <label for="startDate" class="block text-gray-700 text-sm font-bold mb-2">Date de début :</label>
+      <label for="startDate" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Date de début :</label>
       <input type="date" id="startDate" name="startDate"
-             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+             class="shadow appearance-none border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
     </div>
     
     <div class="mb-4">
-      <label for="endDate" class="block text-gray-700 text-sm font-bold mb-2">Date de fin :</label>
+      <label for="endDate" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Date de fin :</label>
       <input type="date" id="endDate" name="endDate"
-             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-    </div>    
+             class="shadow appearance-none border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+    </div> 
+    <div class="mb-4">
+      <label for="matchCount" class="block text-gray-700 dark:text-gray-300 text-sm font-bold mb-2">Nombre de parties :</label>
+      <input type="number" id="matchCount" name="matchCount" min="1" max="100" value="20"
+             class="shadow appearance-none border dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+    </div>
+     
     <div class="flex justify-center">
       <button type="submit" 
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+              class="bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-400 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
         Search
       </button>
     </div>
   </form>
 
-  <div id="result" class="text-gray-700 text-lg mb-4"></div>
+  <div id="result" class="text-gray-700 dark:text-gray-300 text-lg mb-4"></div>
   
   <ul id="match-list" class="w-full max-w-3xl space-y-4">
     <!-- Match list items will be dynamically added here -->
@@ -47,38 +54,38 @@
 
   <!-- TEMPLATE DE MATCH -->
   <template id="match-template">
-    <div class="bg-white shadow-md rounded-lg p-6 mb-4 hidden">
+    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-4 hidden">
       <div class="mb-4">
-        <p class="text-sm text-gray-600 match-date"></p>
-        <p class="text-sm font-bold match-result"></p>
-        <p class="text-sm text-gray-600 match-duration"></p>
+        <p class="text-sm text-gray-600 dark:text-gray-400 match-date"></p>
+        <p class="text-sm font-bold dark:text-gray-200 match-result"></p>
+        <p class="text-sm text-gray-600 dark:text-gray-400 match-duration"></p>
       </div>
       <div class="flex justify-between items-start">
         <div class="w-1/2 player-team">
-          <h3 class="text-lg font-bold team-title"></h3>
+          <h3 class="text-lg font-bold team-title dark:text-gray-100"></h3>
           <div class="mb-4">
-            <p class="text-sm font-semibold text-gray-700">Bans:</p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Bans:</p>
             <div class="flex space-x-2 ban-images"></div>
           </div>
           <div>
-            <p class="text-sm font-semibold text-gray-700">Picks:</p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Picks:</p>
             <div class="flex flex-col space-y-2 pick-list"></div>
           </div>
         </div>
         <div class="w-1/2 text-right enemy-team">
-          <h3 class="text-lg font-bold team-title"></h3>
+          <h3 class="text-lg font-bold team-title dark:text-gray-100"></h3>
           <div class="mb-4">
-            <p class="text-sm font-semibold text-gray-700">Bans:</p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Bans:</p>
             <div class="flex justify-end space-x-2 ban-images"></div>
           </div>
           <div>
-            <p class="text-sm font-semibold text-gray-700">Picks:</p>
+            <p class="text-sm font-semibold text-gray-700 dark:text-gray-300">Picks:</p>
             <div class="flex flex-col space-y-2 items-end pick-list enemy-pick-list"></div>
           </div>
         </div>
       </div>
-      <div class="hidden mt-4 p-4 bg-gray-100 rounded-lg details-container"></div>
-      <button class="bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-600 show-more">
+      <div class="hidden mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg details-container"></div>
+      <button class="bg-blue-500 hover:bg-blue-600 dark:hover:bg-blue-400 text-white px-4 py-2 rounded mt-2 show-more">
         Show More
       </button>
     </div>

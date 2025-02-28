@@ -27,6 +27,7 @@ async function handleFormSubmit(event) {
     const tagLine = document.getElementById('tagLine').value;
     const startDate = document.getElementById('startDate').value.trim();
     const endDate = document.getElementById('endDate').value.trim();
+    const matchCount = document.getElementById('matchCount').value.trim(); // Récupération du nombre de parties
     const searchedPseudo = `${gameName}#${tagLine}`;
 
     const resultDiv = document.getElementById('result');
@@ -45,8 +46,8 @@ async function handleFormSubmit(event) {
         const startTimestamp = startDate ? Math.floor(new Date(startDate).getTime() / 1000) : null;
         const endTimestamp = endDate ? Math.floor(new Date(endDate).getTime() / 1000) + 86399 : null;
 
-        // Préparer l'URL avec la plage de dates si elle est renseignée
-        let url = `/get-matches?game_name=${gameName}&tag_line=${tagLine}`;
+        // Préparer l'URL avec la plage de dates et le nombre de parties
+        let url = `/get-matches?game_name=${gameName}&tag_line=${tagLine}&match_count=${matchCount}`;
         if (startTimestamp) url += `&start_time=${startTimestamp}`;
         if (endTimestamp) url += `&end_time=${endTimestamp}`;
 
@@ -70,7 +71,8 @@ async function handleFormSubmit(event) {
     }
 }
 
-// Fonction pour afficher une vue d'ensemble d'un match// Fonction pour afficher une vue d'ensemble d'un match avec un template HTML
+
+// Fonction pour afficher une vue d'ensemble d'un match
 function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
     const template = document.getElementById("match-template");
     const matchCard = template.content.cloneNode(true).querySelector("div");
@@ -155,9 +157,9 @@ function toggleMatchDetails(matchId, puuid, button, detailsDiv) {
         fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${puuid}`)
             .then(matchDetails => {
                 detailsDiv.innerHTML = `
-                    <div class="grid grid-cols-2 gap-4">
-                        ${generateFullPlayerList(matchDetails.player_team, "bg-blue-200")}
-                        ${generateFullPlayerList(matchDetails.enemy_team, "bg-red-200")}
+                    <div class="flex flex-col space-y-4">
+                        ${generateFullPlayerList(matchDetails.player_team, matchDetails.match_info.duration)}
+                        ${generateFullPlayerList(matchDetails.enemy_team, matchDetails.match_info.duration)}
                     </div>
                 `;
                 detailsDiv.classList.remove("hidden");
@@ -173,23 +175,25 @@ function toggleMatchDetails(matchId, puuid, button, detailsDiv) {
 }
 
 // Fonction pour générer la liste détaillée des joueurs sous forme de tableau
-function generateFullPlayerList(team, bgColor) {
-    // Calcul des valeurs totales pour normaliser les pourcentages
+function generateFullPlayerList(team, gameDuration) {
+    // Calcul des totaux pour normaliser les pourcentages
     const totalDamage = team.champions.reduce((sum, p) => sum + p.damage, 0) || 1;
     const totalGold = team.champions.reduce((sum, p) => sum + p.gold, 0) || 1;
 
     return `
-        <div class="p-4 ${bgColor} rounded-lg">
-            <h4 class="text-lg font-bold mb-2">${team.side === "blue" ? "Équipe Bleue" : "Équipe Rouge"}</h4>
-            <table class="w-full text-left bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="p-4">
+            <h4 class="text-lg font-bold mb-2 dark:text-gray-100">
+                ${team.side === "blue" ? "Équipe Bleue" : "Équipe Rouge"}
+            </h4>
+            <table class="w-full bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
                 <thead>
-                    <tr class="bg-gray-200 text-gray-700">
-                        <th class="p-2">Champion</th>
-                        <th class="p-2">KDA</th>
-                        <th class="p-2">Dégâts</th>
-                        <th class="p-2">Golds</th>
-                        <th class="p-2">CS</th>
-                    </tr>
+                   <tr class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                        <th class="p-2 text-left">Champion</th>
+                        <th class="p-2 text-center">KDA</th>
+                        <th class="p-2 text-center">Dégâts</th>
+                        <th class="p-2 text-center">Golds</th>
+                        <th class="p-2 text-center">CS</th>
+                   </tr>
                 </thead>
                 <tbody>
                     ${team.champions.map(player => {
@@ -202,33 +206,43 @@ function generateFullPlayerList(team, bgColor) {
                         const damagePercentage = Math.round((player.damage / totalDamage) * 100);
                         const goldPercentage = Math.round((player.gold / totalGold) * 100);
 
+                        // Définition des classes de couleur selon l'échelle proposée
+                        const damageColorClass = damagePercentage < 10 
+                            ? 'text-red-500' 
+                            : damagePercentage < 20 
+                                ? 'text-orange-500' 
+                                : 'text-green-500';
+                        const goldColorClass = goldPercentage < 10 
+                            ? 'text-red-500' 
+                            : goldPercentage < 20 
+                                ? 'text-orange-500' 
+                                : 'text-green-500';
+
+                        // Calcul de CS/min (arrondi à une décimale)
+                        const csPerMinute = gameDuration ? (player.cs * 60 / gameDuration).toFixed(1) : "N/A";
+
                         return `
-                        <tr class="border-b ${team.side === 'blue' ? 'bg-blue-100' : 'bg-red-100'}">
+                        <tr class="border-b ${team.side === 'blue' ? 'bg-blue-100 dark:bg-blue-900' : 'bg-red-100 dark:bg-red-900'}">
                             <td class="p-2 flex items-center relative">
                                 <img src="${player.image}" alt="Champion" class="w-10 h-10 rounded">
-                                <span class="absolute bottom-0 right-0 bg-black text-xs rounded ml-1">
-                                    ${player.level}
-                                </span>
+                                <span class="ml-1 text-xs dark:text-gray-300">${player.level}</span>
                             </td>
-                            <td class="p-2">
+                            <td class="p-2 text-center">
                                 ${player.kda} <br>
-                                <span class="text-xs text-gray-600">
-                                    ${kdaRatio}
-                                </span>
+                                <span class="text-xs text-gray-600 dark:text-gray-400">${kdaRatio}</span>
                             </td>
-                            <td class="p-2">
+                            <td class="p-2 text-center">
                                 ${player.damage} <br>
-                                <span class="text-xs text-gray-600">
-                                    ${damagePercentage}%
-                                </span>
+                                <span class="text-xs ${damageColorClass}">${damagePercentage}%</span>
                             </td>
-                            <td class="p-2">
+                            <td class="p-2 text-center">
                                 ${player.gold} <br>
-                                <span class="text-xs text-gray-600">
-                                    ${goldPercentage}%
-                                </span>
+                                <span class="text-xs ${goldColorClass}">${goldPercentage}%</span>
                             </td>
-                            <td class="p-2">${player.cs}</td>
+                            <td class="p-2 text-center">
+                                ${player.cs} <br>
+                                <span class="text-xs text-gray-600 dark:text-gray-400">${csPerMinute}</span>
+                            </td>
                         </tr>
                         `;
                     }).join('')}
@@ -237,6 +251,9 @@ function generateFullPlayerList(team, bgColor) {
         </div>
     `;
 }
+
+
+
 
 // Fonction pour lancer une recherche automatique à partir d'un clic sur un joueur
 function searchPlayer(gameName, tagLine) {
@@ -252,6 +269,7 @@ function appendError(matchList, matchId) {
     errorCard.textContent = `Error fetching details for match ${matchId}`;
     matchList.appendChild(errorCard);
 }
+
 
 // Ajout de l'écouteur sur le formulaire
 document.getElementById('match-form').addEventListener('submit', handleFormSubmit);
