@@ -182,10 +182,10 @@ function generateFullPlayerList(team, gameDuration) {
 
     return `
         <div class="p-4">
-            <h4 class="text-lg font-bold mb-2 dark:text-gray-100">
+            <h4 class="text-lg font-bold mb-2 dark:text-gray-100 ${team.side === "blue" ? "dark:text-blue-600" : "dark:text-red-500"}"">
                 ${team.side === "blue" ? "Équipe Bleue" : "Équipe Rouge"}
             </h4>
-            <table class="w-full bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+            <table class="w-full bg-white dark:bg-gray-800 rounded-lg overflow-hidden">
                 <thead>
                    <tr class="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
                         <th class="p-2 text-left">Champion</th>
@@ -222,7 +222,7 @@ function generateFullPlayerList(team, gameDuration) {
                         const csPerMinute = gameDuration ? (player.cs * 60 / gameDuration).toFixed(1) : "N/A";
 
                         return `
-                        <tr class="border-b ${team.side === 'blue' ? 'bg-blue-100 dark:bg-blue-900' : 'bg-red-100 dark:bg-red-900'}">
+                        <tr class="border-b bg-gray-100 dark:bg-gray-800">
                             <td class="p-2 flex items-center relative">
                                 <img src="${player.image}" alt="Champion" class="w-10 h-10 rounded">
                                 <span class="ml-1 text-xs dark:text-gray-300">${player.level}</span>

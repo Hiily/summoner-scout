@@ -104,7 +104,7 @@ def extract_match_summary(match_details, puuid):
             "gold": player["goldEarned"],
             "kda": f"{player['kills']}/{player['deaths']}/{player['assists']}",
             "level": player["champLevel"],
-            "cs": player["totalMinionsKilled"],
+            "cs": player["totalMinionsKilled"] + player["neutralMinionsKilled"],
             "damage": player["totalDamageDealtToChampions"],
         }
 
