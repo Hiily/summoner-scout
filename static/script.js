@@ -135,7 +135,7 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
         return;
     }
 
-    const championStats = {}; // Agrégation des données par champion
+    const championStats = {};
 
     for (const card of matchCards) {
         const matchId = card.id.replace("match-", "");
@@ -145,29 +145,35 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
                 console.warn(`❌ Aucune donnée en cache pour le match ${matchId}`);
                 continue;
             }
+    
             const allPlayers = [...match.player_team.champions, ...match.enemy_team.champions];
             const searchedPseudoFromMatch = match.searched_player?.pseudo?.trim().toLowerCase();
-
             if (!searchedPseudoFromMatch) continue;
-
+    
             const player = allPlayers.find(p =>
                 p.pseudo?.trim().toLowerCase() === searchedPseudoFromMatch
             );
-
             if (!player) continue;
-
+    
+            // 💡 Identifier dans quelle team il est
+            const team = match.player_team.champions.find(p => p.pseudo?.trim().toLowerCase() === searchedPseudoFromMatch)
+                ? match.player_team
+                : match.enemy_team;
+    
+            const teamPlayers = team.champions;
+            const totalTeamDamage = teamPlayers.reduce((acc, p) => acc + p.damage, 0);
+            const totalTeamGold = teamPlayers.reduce((acc, p) => acc + p.gold, 0);
+    
             const [kills, deaths, assists] = player.kda.split("/").map(Number);
             const kdaRatio = ((kills + assists) / Math.max(1, deaths));
-            const totalDamage = allPlayers.reduce((acc, p) => acc + p.damage, 0);
-            const totalGold = allPlayers.reduce((acc, p) => acc + p.gold, 0);
-            const damagePct = (player.damage / totalDamage) * 100;
-            const goldPct = (player.gold / totalGold) * 100;
+            const damagePct = (player.damage / totalTeamDamage) * 100;
+            const goldPct = (player.gold / totalTeamGold) * 100;
             const csPerMin = (player.cs && match.match_info.duration)
                 ? (player.cs * 60 / match.match_info.duration)
                 : 0;
-
+    
             const champName = player.name || extractChampionNameFromImageUrl(player.image);
-
+    
             if (!championStats[champName]) {
                 championStats[champName] = {
                     total: 0,
@@ -183,7 +189,7 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
                     csPerMin: 0
                 };
             }
-
+    
             const stats = championStats[champName];
             stats.total += 1;
             stats.kills += kills;
@@ -196,11 +202,12 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
             stats.goldPct += goldPct;
             stats.cs += player.cs;
             stats.csPerMin += csPerMin;
-
+    
         } catch (err) {
-            console.error("Erreur lors du fetch pour le match", matchId, err);
+            console.error("Erreur lors du traitement du match", matchId, err);
         }
     }
+    
 
     if (Object.keys(championStats).length === 0) {
         alert("Aucune statistique trouvée pour ce joueur.");
@@ -209,9 +216,9 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
 
     // 📋 Préparer le texte à copier
     const header = [
-        "Champion", "Avg K", "Avg D", "Avg A", "Avg KDA Ratio",
+        "Champion", "Games", "Avg K", "Avg D", "Avg A", "Avg KDA Ratio",
         "Avg Dégâts", "Avg % Dégâts", "Avg Golds", "Avg % Golds", "Avg CS", "Avg CS/min"
-    ].join("\t");
+    ].join("\t");    
 
     const rows = [header];
 
@@ -219,6 +226,7 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
         const avg = key => (stats[key] / stats.total).toFixed(1);
         rows.push([
             champ,
+            stats.total,
             avg("kills"),
             avg("deaths"),
             avg("assists"),
@@ -229,7 +237,7 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
             avg("goldPct"),
             avg("cs"),
             avg("csPerMin")
-        ].join("\t"));
+        ].join("\t"));        
     }
 
     const finalText = rows.join("\n");
