@@ -82,6 +82,10 @@ function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
 
     fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${puuid}`)
         .then(matchDetails => {
+
+            window.matchSummaries = window.matchSummaries || {};
+            window.matchSummaries[matchId] = matchDetails;
+
             const playerSideClass =
                 matchDetails.player_team.side === 'blue' ? 'text-blue-600' : 'text-red-600';
             const enemySideClass =
@@ -107,6 +111,7 @@ function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
 
             matchList.appendChild(matchCard);
 
+            
             
         })
         .catch(error => {
@@ -135,7 +140,11 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
     for (const card of matchCards) {
         const matchId = card.id.replace("match-", "");
         try {
-            const match = await fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${window.searchedPuuid}`);
+            const match = window.matchSummaries?.[matchId];
+            if (!match) {
+                console.warn(`❌ Aucune donnée en cache pour le match ${matchId}`);
+                continue;
+            }
             const allPlayers = [...match.player_team.champions, ...match.enemy_team.champions];
             const searchedPseudoFromMatch = match.searched_player?.pseudo?.trim().toLowerCase();
 
