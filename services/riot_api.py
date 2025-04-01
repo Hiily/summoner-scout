@@ -68,33 +68,33 @@ def extract_match_summary(match_details, puuid):
     info = match_details["info"]
     teams = info["teams"]
     participants = info["participants"] 
-    # Récupérer les données des champions
     champion_map = get_champion_data()  
+
     # Identifier l'équipe du joueur
     player_team_id = next(p["teamId"] for p in participants if p["puuid"] == puuid)
 
     # Séparer les équipes
     player_team = next(t for t in teams if t["teamId"] == player_team_id)
     enemy_team = next(t for t in teams if t["teamId"] != player_team_id)
-    
+
     # Déterminer l'équipe gagnante
     winning_team_id = next(t["teamId"] for t in teams if t["win"])
     winning_side = "blue" if winning_team_id == 100 else "red"
-    
+
     # Récupérer la date et durée de la partie
-    game_duration = info["gameDuration"]  # en secondes
-    game_start_timestamp = info.get("gameStartTimestamp", 0)  # en millisecondes
+    game_duration = info["gameDuration"]
+    game_start_timestamp = info.get("gameStartTimestamp", 0)
     game_date = datetime.utcfromtimestamp(game_start_timestamp / 1000).strftime("%Y-%m-%d %H:%M:%S")
 
-    # Liste des rôles connus et ordre de tri
+    # Rôles et ordre d'affichage
     role_order = ["top", "jungle", "middle", "bottom", "utility"]
 
-    # Déterminer le side de chaque équipe
+    # Déterminer le side
     side_mapping = {100: "blue", 200: "red"}
     player_team_side = side_mapping.get(player_team["teamId"], "unknown")
     enemy_team_side = side_mapping.get(enemy_team["teamId"], "unknown")
 
-    # Fonction pour récupérer les statistiques d'un joueur
+    # Fonction stats joueur
     def get_player_stats(player):
         return {
             "name": player["championName"],
@@ -108,7 +108,6 @@ def extract_match_summary(match_details, puuid):
             "damage": player["totalDamageDealtToChampions"],
         }
 
-    # Récupérer les bans et champions avec stats
     result = {
         "match_info": {
             "duration": game_duration,
@@ -145,8 +144,15 @@ def extract_match_summary(match_details, puuid):
                 key=lambda x: role_order.index(x["position"]) if x["position"] in role_order else len(role_order),
             ),
         },
+        # 🆕 Pseudo du joueur recherché tel qu’il apparaît dans CE match
+        "searched_player": {
+            "pseudo": next(
+                f"{p['riotIdGameName']}#{p['riotIdTagline']}" 
+                for p in participants 
+                if p["puuid"] == puuid
+            )
+        }
     }
 
     return result
-
 

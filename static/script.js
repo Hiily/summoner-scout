@@ -41,6 +41,7 @@ async function handleFormSubmit(event) {
         // Récupération du PUUID
         const puuidData = await fetchAPI(`/get-puuid?game_name=${gameName}&tag_line=${tagLine}`);
         const puuid = puuidData.puuid;
+        window.searchedPuuid = puuid;
 
         // Conversion des dates en timestamp Unix (secondes)
         const startTimestamp = startDate ? Math.floor(new Date(startDate).getTime() / 1000) : null;
@@ -105,6 +106,8 @@ function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
             showMoreButton.onclick = () => toggleMatchDetails(matchId, puuid, showMoreButton, matchCard.querySelector(".details-container"));
 
             matchList.appendChild(matchCard);
+
+            
         })
         .catch(error => {
             matchCard.innerHTML = `<p class="text-red-600">Error fetching match details: ${error.message}</p>`;
@@ -112,7 +115,96 @@ function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
         });
 }
 
-// 🔧 Fonction pour mettre à jour l'affichage d'une équipe (bans + picks)
+// 🔧 Fonction utilitaire pour récupérer le nom de champion depuis l'image
+function extractChampionNameFromImageUrl(url) {
+    const parts = url.split('/');
+    const fileName = parts[parts.length - 1]; // e.g. "Ahri.png"
+    return fileName.replace('.png', '');
+}
+
+document.getElementById("copy-all-stats").addEventListener("click", async () => {
+    const matchCards = document.querySelectorAll("div[id^='match-']:not(.hidden)");
+
+    if (matchCards.length === 0) {
+        alert("Aucun match à exporter.");
+        return;
+    }
+
+    const header = [
+        "Champion", "K", "D", "A", "KDA Ratio", 
+        "Dégâts", "% Dégâts", "Golds", "% Golds", "CS", "CS/min"
+    ].join("\t");
+
+    let rows = [header];
+
+    for (const card of matchCards) {
+        const matchId = card.id.replace("match-", "");
+        try {
+            const match = await fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${window.searchedPuuid}`);
+            const allPlayers = [...match.player_team.champions, ...match.enemy_team.champions];
+
+            const searchedPseudoFromMatch = match.searched_player?.pseudo?.trim().toLowerCase();
+
+            if (!searchedPseudoFromMatch) {
+                console.warn(`⚠️ Pseudo non trouvé dans le match : ${matchId}`);
+                continue;
+            }
+
+            const player = allPlayers.find(p =>
+                p.pseudo?.trim().toLowerCase() === searchedPseudoFromMatch
+            );
+
+            if (!player) {
+                console.warn(`⚠️ Joueur introuvable dans le match : ${matchId}`);
+                console.log("→ Pseudos disponibles :", allPlayers.map(p => p.pseudo));
+                continue;
+            }
+
+            const [kills, deaths, assists] = player.kda.split("/").map(Number);
+            const kdaRatio = ((kills + assists) / Math.max(1, deaths)).toFixed(2);
+            const totalDamage = allPlayers.reduce((acc, p) => acc + p.damage, 0);
+            const totalGold = allPlayers.reduce((acc, p) => acc + p.gold, 0);
+            const damagePct = ((player.damage / totalDamage) * 100).toFixed(1);
+            const goldPct = ((player.gold / totalGold) * 100).toFixed(1);
+            const csPerMin = (player.cs && match.match_info.duration)
+                ? (player.cs * 60 / match.match_info.duration).toFixed(1)
+                : "N/A";
+
+            // ✅ Champion depuis name ou fallback image URL
+            const champName = player.name || extractChampionNameFromImageUrl(player.image);
+
+            rows.push([
+                champName,
+                kills, deaths, assists,
+                kdaRatio,
+                player.damage, `${damagePct}%`,
+                player.gold, `${goldPct}%`,
+                player.cs, csPerMin
+            ].join("\t"));
+
+        } catch (err) {
+            console.error("Erreur lors du fetch pour le match", matchId, err);
+        }
+    }
+
+    if (rows.length === 1) {
+        alert("Aucune statistique trouvée pour ce joueur.");
+        return;
+    }
+
+    const finalText = rows.join("\n");
+    navigator.clipboard.writeText(finalText).then(() => {
+        alert("✅ Stats copiées au format Sheets !");
+    }).catch(err => {
+        alert("❌ Erreur lors de la copie.");
+        console.error(err);
+    });
+});
+
+
+
+
+
 // 🔧 Fonction pour mettre à jour l'affichage d'une équipe (bans + picks)
 function updateTeamDetails(teamElement, teamData, sideClass, isEnemy = false) {
     teamElement.querySelector(".team-title").textContent =
