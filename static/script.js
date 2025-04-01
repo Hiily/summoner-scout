@@ -116,90 +116,122 @@ function appendMatchOverview(matchList, matchId, puuid, searchedPseudo) {
 }
 
 // 🔧 Fonction utilitaire pour récupérer le nom de champion depuis l'image
+// 🔧 Utilitaire pour extraire le nom du champion depuis l'URL de l'image
 function extractChampionNameFromImageUrl(url) {
     const parts = url.split('/');
-    const fileName = parts[parts.length - 1]; // e.g. "Ahri.png"
+    const fileName = parts[parts.length - 1];
     return fileName.replace('.png', '');
 }
 
 document.getElementById("copy-all-stats").addEventListener("click", async () => {
     const matchCards = document.querySelectorAll("div[id^='match-']:not(.hidden)");
-
     if (matchCards.length === 0) {
         alert("Aucun match à exporter.");
         return;
     }
 
-    const header = [
-        "Champion", "K", "D", "A", "KDA Ratio", 
-        "Dégâts", "% Dégâts", "Golds", "% Golds", "CS", "CS/min"
-    ].join("\t");
-
-    let rows = [header];
+    const championStats = {}; // Agrégation des données par champion
 
     for (const card of matchCards) {
         const matchId = card.id.replace("match-", "");
         try {
             const match = await fetchAPI(`/get-match-summary?match_id=${matchId}&puuid=${window.searchedPuuid}`);
             const allPlayers = [...match.player_team.champions, ...match.enemy_team.champions];
-
             const searchedPseudoFromMatch = match.searched_player?.pseudo?.trim().toLowerCase();
 
-            if (!searchedPseudoFromMatch) {
-                console.warn(`⚠️ Pseudo non trouvé dans le match : ${matchId}`);
-                continue;
-            }
+            if (!searchedPseudoFromMatch) continue;
 
             const player = allPlayers.find(p =>
                 p.pseudo?.trim().toLowerCase() === searchedPseudoFromMatch
             );
 
-            if (!player) {
-                console.warn(`⚠️ Joueur introuvable dans le match : ${matchId}`);
-                console.log("→ Pseudos disponibles :", allPlayers.map(p => p.pseudo));
-                continue;
-            }
+            if (!player) continue;
 
             const [kills, deaths, assists] = player.kda.split("/").map(Number);
-            const kdaRatio = ((kills + assists) / Math.max(1, deaths)).toFixed(2);
+            const kdaRatio = ((kills + assists) / Math.max(1, deaths));
             const totalDamage = allPlayers.reduce((acc, p) => acc + p.damage, 0);
             const totalGold = allPlayers.reduce((acc, p) => acc + p.gold, 0);
-            const damagePct = ((player.damage / totalDamage) * 100).toFixed(1);
-            const goldPct = ((player.gold / totalGold) * 100).toFixed(1);
+            const damagePct = (player.damage / totalDamage) * 100;
+            const goldPct = (player.gold / totalGold) * 100;
             const csPerMin = (player.cs && match.match_info.duration)
-                ? (player.cs * 60 / match.match_info.duration).toFixed(1)
-                : "N/A";
+                ? (player.cs * 60 / match.match_info.duration)
+                : 0;
 
-            // ✅ Champion depuis name ou fallback image URL
             const champName = player.name || extractChampionNameFromImageUrl(player.image);
 
-            rows.push([
-                champName,
-                kills, deaths, assists,
-                kdaRatio,
-                player.damage, `${damagePct}%`,
-                player.gold, `${goldPct}%`,
-                player.cs, csPerMin
-            ].join("\t"));
+            if (!championStats[champName]) {
+                championStats[champName] = {
+                    total: 0,
+                    kills: 0,
+                    deaths: 0,
+                    assists: 0,
+                    kdaSum: 0,
+                    damage: 0,
+                    damagePct: 0,
+                    gold: 0,
+                    goldPct: 0,
+                    cs: 0,
+                    csPerMin: 0
+                };
+            }
+
+            const stats = championStats[champName];
+            stats.total += 1;
+            stats.kills += kills;
+            stats.deaths += deaths;
+            stats.assists += assists;
+            stats.kdaSum += kdaRatio;
+            stats.damage += player.damage;
+            stats.damagePct += damagePct;
+            stats.gold += player.gold;
+            stats.goldPct += goldPct;
+            stats.cs += player.cs;
+            stats.csPerMin += csPerMin;
 
         } catch (err) {
             console.error("Erreur lors du fetch pour le match", matchId, err);
         }
     }
 
-    if (rows.length === 1) {
+    if (Object.keys(championStats).length === 0) {
         alert("Aucune statistique trouvée pour ce joueur.");
         return;
     }
 
+    // 📋 Préparer le texte à copier
+    const header = [
+        "Champion", "Avg K", "Avg D", "Avg A", "Avg KDA Ratio",
+        "Avg Dégâts", "Avg % Dégâts", "Avg Golds", "Avg % Golds", "Avg CS", "Avg CS/min"
+    ].join("\t");
+
+    const rows = [header];
+
+    for (const [champ, stats] of Object.entries(championStats)) {
+        const avg = key => (stats[key] / stats.total).toFixed(1);
+        rows.push([
+            champ,
+            avg("kills"),
+            avg("deaths"),
+            avg("assists"),
+            (stats.kdaSum / stats.total).toFixed(2),
+            avg("damage"),
+            avg("damagePct"),
+            avg("gold"),
+            avg("goldPct"),
+            avg("cs"),
+            avg("csPerMin")
+        ].join("\t"));
+    }
+
     const finalText = rows.join("\n");
     navigator.clipboard.writeText(finalText).then(() => {
-        alert("✅ Stats copiées au format Sheets !");
+        alert("✅ Moyennes par champion copiées !");
     }).catch(err => {
         alert("❌ Erreur lors de la copie.");
         console.error(err);
     });
 });
+
 
 
 
