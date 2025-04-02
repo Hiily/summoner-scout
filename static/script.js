@@ -145,25 +145,26 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
                 console.warn(`❌ Aucune donnée en cache pour le match ${matchId}`);
                 continue;
             }
-    
+
             const allPlayers = [...match.player_team.champions, ...match.enemy_team.champions];
             const searchedPseudoFromMatch = match.searched_player?.pseudo?.trim().toLowerCase();
             if (!searchedPseudoFromMatch) continue;
-    
+
             const player = allPlayers.find(p =>
                 p.pseudo?.trim().toLowerCase() === searchedPseudoFromMatch
             );
             if (!player) continue;
-    
-            // 💡 Identifier dans quelle team il est
+
             const team = match.player_team.champions.find(p => p.pseudo?.trim().toLowerCase() === searchedPseudoFromMatch)
                 ? match.player_team
                 : match.enemy_team;
-    
+
+            const didWin = match.match_info.winning_team === team.side;
+
             const teamPlayers = team.champions;
             const totalTeamDamage = teamPlayers.reduce((acc, p) => acc + p.damage, 0);
             const totalTeamGold = teamPlayers.reduce((acc, p) => acc + p.gold, 0);
-    
+
             const [kills, deaths, assists] = player.kda.split("/").map(Number);
             const kdaRatio = ((kills + assists) / Math.max(1, deaths));
             const damagePct = (player.damage / totalTeamDamage) * 100;
@@ -171,12 +172,13 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
             const csPerMin = (player.cs && match.match_info.duration)
                 ? (player.cs * 60 / match.match_info.duration)
                 : 0;
-    
+
             const champName = player.name || extractChampionNameFromImageUrl(player.image);
-    
+
             if (!championStats[champName]) {
                 championStats[champName] = {
                     total: 0,
+                    wins: 0,
                     kills: 0,
                     deaths: 0,
                     assists: 0,
@@ -189,9 +191,10 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
                     csPerMin: 0
                 };
             }
-    
+
             const stats = championStats[champName];
             stats.total += 1;
+            if (didWin) stats.wins += 1;
             stats.kills += kills;
             stats.deaths += deaths;
             stats.assists += assists;
@@ -202,12 +205,11 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
             stats.goldPct += goldPct;
             stats.cs += player.cs;
             stats.csPerMin += csPerMin;
-    
+
         } catch (err) {
             console.error("Erreur lors du traitement du match", matchId, err);
         }
     }
-    
 
     if (Object.keys(championStats).length === 0) {
         alert("Aucune statistique trouvée pour ce joueur.");
@@ -216,28 +218,31 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
 
     // 📋 Préparer le texte à copier
     const header = [
-        "Champion", "Games", "Avg K", "Avg D", "Avg A", "Avg KDA Ratio",
+        "Champion", "Games", "WR%", "Avg K", "Avg D", "Avg A", "Avg KDA Ratio",
         "Avg Dégâts", "Avg % Dégâts", "Avg Golds", "Avg % Golds", "Avg CS", "Avg CS/min"
-    ].join("\t");    
+    ].join("\t");
 
     const rows = [header];
 
     for (const [champ, stats] of Object.entries(championStats)) {
         const avg = key => (stats[key] / stats.total).toFixed(1);
+        const winrate = ((stats.wins / stats.total) * 100).toFixed(1);
+
         rows.push([
             champ,
             stats.total,
+            winrate + "%",
             avg("kills"),
             avg("deaths"),
             avg("assists"),
             (stats.kdaSum / stats.total).toFixed(2),
             avg("damage"),
-            avg("damagePct"),
+            avg("damagePct") + "%",
             avg("gold"),
-            avg("goldPct"),
+            avg("goldPct") + "%",
             avg("cs"),
             avg("csPerMin")
-        ].join("\t"));        
+        ].join("\t"));
     }
 
     const finalText = rows.join("\n");
@@ -248,7 +253,6 @@ document.getElementById("copy-all-stats").addEventListener("click", async () => 
         console.error(err);
     });
 });
-
 
 
 
